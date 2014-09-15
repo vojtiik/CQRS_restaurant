@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CQRS_restaurant", "CQRS_restaurant\CQRS_restaurant.csproj", "{AD93CF51-F36C-4889-9AD4-88CCBB6899B0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CQRS_restaurant.Tests", "CQRS_restaurant.Tests\CQRS_restaurant.Tests.csproj", "{C22999FD-C483-4D82-93EC-B32584D832CC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AD93CF51-F36C-4889-9AD4-88CCBB6899B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD93CF51-F36C-4889-9AD4-88CCBB6899B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD93CF51-F36C-4889-9AD4-88CCBB6899B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD93CF51-F36C-4889-9AD4-88CCBB6899B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C22999FD-C483-4D82-93EC-B32584D832CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C22999FD-C483-4D82-93EC-B32584D832CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C22999FD-C483-4D82-93EC-B32584D832CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C22999FD-C483-4D82-93EC-B32584D832CC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
