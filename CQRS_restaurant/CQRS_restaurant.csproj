@@ -44,15 +44,30 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Actors\Assistantmanager.cs" />
+    <Compile Include="Actors\Cashier.cs" />
+    <Compile Include="Actors\Cook.cs" />
+    <Compile Include="Actors\Waiter.cs" />
     <Compile Include="BaseEvent.cs" />
+    <Compile Include="Handlers\ConsolePrintingHandler.cs" />
+    <Compile Include="Handlers\IHandler.cs" />
+    <Compile Include="Handlers\MoreFairDispatcherHandler.cs" />
+    <Compile Include="Handlers\MultiplexerHandler.cs" />
+    <Compile Include="Handlers\RoundRobinHandler.cs" />
+    <Compile Include="Handlers\QueuedHandler.cs" />
+    <Compile Include="Handlers\TimeToLiveHandler.cs" />
+    <Compile Include="IMonitor.cs" />
+    <Compile Include="IStartable.cs" />
     <Compile Include="Order.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TopicBasedPubsub.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

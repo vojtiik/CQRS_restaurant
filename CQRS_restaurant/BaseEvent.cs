@@ -4,7 +4,12 @@ namespace CQRS_restaurant
 {
     public class BaseEvent : IMessage, IWontWaitForEver
     {
-        public string EventId { get; set; }
+        public BaseEvent()
+        {
+            EventId = Guid.NewGuid().ToString();
+        }
+
+        public string EventId { get; private set; }
 
         public DateTime LiveUntil
         { get; set; }
