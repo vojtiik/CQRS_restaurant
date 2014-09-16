@@ -16,9 +16,7 @@ namespace CQRS_restaurant
         public void Start()
         {
             var orderHandler = new ConsolePrintingOrderHandler();
-
             var cashier = new Cashier(orderHandler);
-
             var assistant = new Assistantmanager(cashier);
 
             var rnd = new Random();
@@ -31,21 +29,19 @@ namespace CQRS_restaurant
                 new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ))
             };
 
+            var dispatcher = new ThreadedHandler(new MoreFairDispatcher(startables));
+            dispatcher.Start();
+
             foreach (var startable in startables)
             {
                 startable.Start();
             }
 
             //var waiter = new Waiter(cook);
-            var waiter = new Waiter(new RoundRobin(new List<IHandlerOrder>()
-            {
-               startables[0],
-               startables[1]
-            }));
+            var waiter = new Waiter(dispatcher);
 
             var thread = new Thread(Monitor);
             thread.Start();
-
 
             var items = new[]
             {
@@ -53,12 +49,11 @@ namespace CQRS_restaurant
                 new Item {Name = "Goulash", Qty = 2, Price = 3.50m}
             };
 
-           
+
             for (int i = 0; i < 1000; i++)
             {
-               waiter.PlaceOrder(items);
+                waiter.PlaceOrder(items);
             }
-
 
 
             foreach (var orderid in cashier.GetOutstandingOrders())
@@ -66,7 +61,7 @@ namespace CQRS_restaurant
                 cashier.Pay(orderid);
 
             }
-            
+
             Console.ReadLine();
         }
 
@@ -91,6 +86,37 @@ namespace CQRS_restaurant
             v.Start();
         }
     }
+
+
+    public class MoreFairDispatcher : IHandlerOrder
+    {
+        private readonly List<ThreadedHandler> _handlers;
+
+        public MoreFairDispatcher(IEnumerable<ThreadedHandler> handlers)
+        {
+            _handlers = new List<ThreadedHandler>(handlers); ;
+        }
+
+        public void HandleAnOrder(Order order)
+        {
+            while (true)
+            {
+
+                foreach (var handle in _handlers)
+                {
+                    var queuecount = handle.GetQueueCount();
+                    if (queuecount < 5)
+                    {
+                        handle.HandleAnOrder(order);
+                        return;
+                    }
+                }
+
+                Thread.Sleep(1);
+            }
+        }
+    }
+
 
     public class ThreadedHandler : IHandlerOrder, IStartable, IMonitor
     {
@@ -138,10 +164,14 @@ namespace CQRS_restaurant
             }
         }
 
-
         public string Status()
         {
             return "" + "count in the queue" + _queue.Count();
+        }
+
+        public int GetQueueCount()
+        {
+            return _queue.Count();
         }
     }
 
@@ -175,12 +205,11 @@ namespace CQRS_restaurant
                 _roundRobinHandlers.Enqueue(handle);
             }
         }
+
         public RoundRobin(IEnumerable<IHandlerOrder> handlers)
         {
             _roundRobinHandlers = new Queue<IHandlerOrder>(handlers);
         }
-
-
     }
 
     public class Multiplexer : IHandlerOrder
@@ -225,7 +254,7 @@ namespace CQRS_restaurant
 
         public string PlaceOrder(IEnumerable<Item> items)
         {
-          
+
             var order = new Order { OrderId = Guid.NewGuid().ToString() };
             foreach (var item in items)
             {
@@ -261,7 +290,7 @@ namespace CQRS_restaurant
                 {
                     order.AddIngredient(ingredient);
                 }
-        
+
             //    Console.WriteLine(JsonConvert.SerializeObject(order.Ingredients) + "added.");
 
             Thread.Sleep(_cookTime);
@@ -281,7 +310,7 @@ namespace CQRS_restaurant
 
         public void HandleAnOrder(Order order)
         {
-             order.SubTotal = order.Items.Sum(x => x.Price * x.Qty);
+            order.SubTotal = order.Items.Sum(x => x.Price * x.Qty);
             order.Tax = order.SubTotal * 0.2m;
             order.Total = order.SubTotal + order.Tax;
 
@@ -313,7 +342,7 @@ namespace CQRS_restaurant
 
         public IList<string> GetOutstandingOrders()
         {
-            return _orders.Where(x => x.Value.Paid == false).Select(x=>x.Key).ToList();
+            return _orders.Where(x => x.Value.Paid == false).Select(x => x.Key).ToList();
 
 
         }
