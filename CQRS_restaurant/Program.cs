@@ -3,6 +3,7 @@ using System.CodeDom;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Newtonsoft.Json;
 using System.Collections.Generic;
@@ -16,33 +17,45 @@ namespace CQRS_restaurant
 
         public void Start()
         {
+            var pubsub = new Pubsub();
+
             var orderHandler = new ConsolePrintingOrderHandler();
-            var cashier = new Cashier(orderHandler);
-            var assistant = new Assistantmanager(cashier);
+            var cashier = new ThreadedHandler(new Cashier(pubsub), "cashier");
+            var assistant = new ThreadedHandler(new Assistantmanager(pubsub), "assistant");
 
             var rnd = new Random();
             startables = new List<ThreadedHandler>()
             {
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook1"),
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook2"),
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook3"),
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook4"),
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook5")
+                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook1"),
+                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook2"),
+                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook3"),
+                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook4"),
+                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook5"),
+
             };
-            var dispatcher = new ThreadedHandler(new TimeToLiveHandler(new MoreFairDispatcher(startables)), "disp");
-      
-            dispatcher.Start();
+
+            var kitchen = new ThreadedHandler(new TimeToLiveHandler(new MoreFairDispatcher(startables)), "disp");
+
+            pubsub.Subscribe("ordered", kitchen);
+            pubsub.Subscribe("cooked", assistant);
+            pubsub.Subscribe("taxed", cashier);
+            pubsub.Subscribe("paid", orderHandler);
+
+            kitchen.Start();
+            assistant.Start();
+            cashier.Start();
 
             _queues = startables.ToList();
-            _queues.Add(dispatcher);
+            _queues.Add(kitchen);
+            _queues.Add(cashier);
+            _queues.Add(assistant);
 
             foreach (var startable in startables)
             {
                 startable.Start();
             }
 
-            //var waiter = new Waiter(cook);
-            var waiter = new Waiter(dispatcher);
+            var waiter = new Waiter(pubsub);
 
             var thread = new Thread(Monitor);
             thread.Start();
@@ -53,16 +66,9 @@ namespace CQRS_restaurant
                 new Item {Name = "Goulash", Qty = 2, Price = 3.50m}
             };
 
-
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 100; i++)
             {
                 waiter.PlaceOrder(items);
-            }
-
-
-            foreach (var orderid in cashier.GetOutstandingOrders())
-            {
-                cashier.Pay(orderid);
             }
 
             Console.ReadLine();
@@ -72,13 +78,14 @@ namespace CQRS_restaurant
         {
             while (true)
             {
-                Thread.Sleep(2000);
+                Thread.Sleep(1000);
                 foreach (var startable in _queues)
                 {
                     Console.WriteLine(startable.Status());
                 }
             }
         }
+
     }
 
     class Program
@@ -87,6 +94,41 @@ namespace CQRS_restaurant
         {
             var v = new WireUp();
             v.Start();
+        }
+    }
+
+    public class Pubsub : IPublisher
+    {
+        private Dictionary<string, Multiplexer> mutiplexers = new Dictionary<string, Multiplexer>();
+
+        public Pubsub()
+        {
+        }
+
+        public void Subscribe(string topic, IHandlerOrder handler)
+        {
+            Multiplexer multi;
+            if (mutiplexers.TryGetValue(topic, out multi))
+            {
+                multi.AddHandler(handler);
+            }
+            else
+            {
+                mutiplexers.Add(topic, new Multiplexer(new List<IHandlerOrder> { handler }));
+            }
+        }
+
+        public void Publish(string topic, Order order)
+        {
+            Multiplexer multi;
+            if (mutiplexers.TryGetValue(topic, out multi))
+            {
+                multi.HandleAnOrder(order);
+            }
+            else
+            {
+                Console.WriteLine("no matching multiplexer." + topic);
+            }
         }
     }
 
@@ -108,9 +150,9 @@ namespace CQRS_restaurant
             }
             else
             {
-                 // drop
+                // drop
                 Console.WriteLine("dropping order nr: " + order.OrderId);
-            
+
             }
         }
     }
@@ -215,6 +257,10 @@ namespace CQRS_restaurant
         void Start();
     }
 
+    public interface IPublisher
+    {
+        void Publish(string topic, Order order);
+    }
 
     public class RoundRobin : IHandlerOrder
     {
@@ -245,11 +291,11 @@ namespace CQRS_restaurant
 
     public class Multiplexer : IHandlerOrder
     {
-        private readonly IEnumerable<IHandlerOrder> _handlers;
+        private readonly List<IHandlerOrder> _handlers;
 
         public Multiplexer(IEnumerable<IHandlerOrder> handlers)
         {
-            _handlers = handlers;
+            _handlers = handlers.ToList();
         }
 
         public void HandleAnOrder(Order order)
@@ -258,6 +304,11 @@ namespace CQRS_restaurant
             {
                 handler.HandleAnOrder(order);
             }
+        }
+
+        public void AddHandler(IHandlerOrder handler)
+        {
+            _handlers.Add(handler);
         }
     }
 
@@ -270,37 +321,40 @@ namespace CQRS_restaurant
     {
         public void HandleAnOrder(Order order)
         {
-            // Console.WriteLine(JsonConvert.SerializeObject(order));
+            Console.WriteLine("order completed" + order.OrderId);
+           // Console.WriteLine(JsonConvert.SerializeObject(order));
         }
     }
 
     public class Waiter
     {
-        private readonly IHandlerOrder _orderHandler;
+        private readonly IPublisher _publisher;
 
-        public Waiter(IHandlerOrder orderHandler)
+        public Waiter(IPublisher publisher)
         {
-            _orderHandler = orderHandler;
+            _publisher = publisher;
         }
 
         public string PlaceOrder(IEnumerable<Item> items)
         {
-
             var order = new Order { OrderId = Guid.NewGuid().ToString() };
-            order.LiveUntil = DateTime.Now.AddSeconds(5);
+            order.LiveUntil = DateTime.Now.AddSeconds(10);
 
             foreach (var item in items)
             {
                 order.AddItem(item);
             }
-            _orderHandler.HandleAnOrder(order);
+
+            _publisher.Publish("ordered", order);
+
             return order.OrderId;
         }
     }
 
     public class Cook : IHandlerOrder
     {
-        private IHandlerOrder _nextHandler;
+        private readonly IPublisher _publisher;
+
         private readonly int _cookTime;
 
         Dictionary<string, string[]> ingredients = new Dictionary<string, string[]>
@@ -310,9 +364,9 @@ namespace CQRS_restaurant
             {"Pie", new[]{"beef", "broken dreams"}},
         };
 
-        public Cook(IHandlerOrder nextHandler, int cookTime)
+        public Cook(IPublisher publisher, int cookTime)
         {
-            _nextHandler = nextHandler;
+            _publisher = publisher;
             _cookTime = cookTime;
         }
 
@@ -328,17 +382,18 @@ namespace CQRS_restaurant
 
             Thread.Sleep(_cookTime);
 
-            _nextHandler.HandleAnOrder(order);
+            _publisher.Publish("cooked", order);
         }
     }
 
     public class Assistantmanager : IHandlerOrder
     {
-        private IHandlerOrder _nextHandler;
+        private readonly IPublisher _publisher;
 
-        public Assistantmanager(IHandlerOrder nextHandler)
+        public Assistantmanager(IPublisher publisher)
         {
-            _nextHandler = nextHandler;
+            _publisher = publisher;
+
         }
 
         public void HandleAnOrder(Order order)
@@ -347,36 +402,37 @@ namespace CQRS_restaurant
             order.Tax = order.SubTotal * 0.2m;
             order.Total = order.SubTotal + order.Tax;
 
-            _nextHandler.HandleAnOrder(order);
+            _publisher.Publish("taxed", order);
         }
     }
 
     public class Cashier : IHandlerOrder
     {
-        private IHandlerOrder _nextHandler;
+        private readonly IPublisher _publisher;
 
         private Dictionary<string, Order> _orders = new Dictionary<string, Order>();
 
-        public Cashier(IHandlerOrder nextHandler)
+        public Cashier(IPublisher publisher)
         {
-            _nextHandler = nextHandler;
+            _publisher = publisher;
         }
 
         public void HandleAnOrder(Order order)
         {
             _orders.Add(order.OrderId, order);
-            _nextHandler.HandleAnOrder(order);
+            _publisher.Publish("paid", order);
         }
 
         public void Pay(string orderId)
         {
             _orders[orderId].Paid = true;
+            Console.WriteLine("Paid for " + orderId);
         }
 
         public IList<string> GetOutstandingOrders()
         {
-            return _orders.Where(x => x.Value.Paid == false).Select(x => x.Key).ToList();
-
+            var orders = _orders.Where(x => x.Value.Paid == false).Select(x => x.Key).ToList();
+            return orders;
         }
     }
 
