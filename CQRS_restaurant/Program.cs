@@ -12,6 +12,7 @@ namespace CQRS_restaurant
     public class WireUp
     {
         List<ThreadedHandler> startables;
+        private List<ThreadedHandler> _queues;
 
         public void Start()
         {
@@ -22,16 +23,19 @@ namespace CQRS_restaurant
             var rnd = new Random();
             startables = new List<ThreadedHandler>()
             {
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) )),
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) )),
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) )),
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) )),
-                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ))
+                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook1"),
+                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook2"),
+                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook3"),
+                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook4"),
+                new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook5")
             };
 
-            var dispatcher = new ThreadedHandler(new MoreFairDispatcher(startables));
+            var dispatcher = new ThreadedHandler(new MoreFairDispatcher(startables), "fair dispatcher");
             dispatcher.Start();
-
+          
+            _queues = startables.ToList();
+            _queues.Add(dispatcher);
+           
             foreach (var startable in startables)
             {
                 startable.Start();
@@ -59,7 +63,6 @@ namespace CQRS_restaurant
             foreach (var orderid in cashier.GetOutstandingOrders())
             {
                 cashier.Pay(orderid);
-
             }
 
             Console.ReadLine();
@@ -70,7 +73,7 @@ namespace CQRS_restaurant
             while (true)
             {
                 Thread.Sleep(2000);
-                foreach (var startable in startables)
+                foreach (var startable in _queues)
                 {
                     Console.WriteLine(startable.Status());
                 }
@@ -115,17 +118,21 @@ namespace CQRS_restaurant
                 Thread.Sleep(1);
             }
         }
+
+
     }
 
 
     public class ThreadedHandler : IHandlerOrder, IStartable, IMonitor
     {
         private readonly IHandlerOrder _handler;
+        private readonly string _name;
         private readonly ConcurrentQueue<Order> _queue = new ConcurrentQueue<Order>();
 
-        public ThreadedHandler(IHandlerOrder handler)
+        public ThreadedHandler(IHandlerOrder handler, string name)
         {
             _handler = handler;
+            _name = name;
         }
 
         public void HandleAnOrder(Order order)
@@ -166,7 +173,7 @@ namespace CQRS_restaurant
 
         public string Status()
         {
-            return "" + "count in the queue" + _queue.Count();
+            return _name + " count in the queue : " + _queue.Count();
         }
 
         public int GetQueueCount()
@@ -239,7 +246,7 @@ namespace CQRS_restaurant
     {
         public void HandleAnOrder(Order order)
         {
-            Console.WriteLine(JsonConvert.SerializeObject(order));
+            // Console.WriteLine(JsonConvert.SerializeObject(order));
         }
     }
 
