@@ -1,9 +1,10 @@
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
 namespace CQRS_restaurant
 {
-    public class Order
+    public class Order : IWontWaitForEver
     {
         private readonly JObject _doc;
 
@@ -162,5 +163,11 @@ namespace CQRS_restaurant
             ((JArray)_doc.Property("ingredients").Value).Add(ingridient);
         }
 
+        public DateTime LiveUntil { get; set; }
+    }
+
+    public interface IWontWaitForEver
+    {
+         DateTime LiveUntil { get; set; }
     }
 }

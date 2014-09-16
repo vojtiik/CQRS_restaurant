@@ -29,13 +29,13 @@ namespace CQRS_restaurant
                 new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook4"),
                 new ThreadedHandler(new Cook(assistant,  rnd.Next(0,1000) ), "cook5")
             };
-
-            var dispatcher = new ThreadedHandler(new MoreFairDispatcher(startables), "fair dispatcher");
+            var dispatcher = new ThreadedHandler(new TimeToLiveHandler(new MoreFairDispatcher(startables)), "disp");
+      
             dispatcher.Start();
-          
+
             _queues = startables.ToList();
             _queues.Add(dispatcher);
-           
+
             foreach (var startable in startables)
             {
                 startable.Start();
@@ -91,6 +91,31 @@ namespace CQRS_restaurant
     }
 
 
+    public class TimeToLiveHandler : IHandlerOrder
+    {
+        private readonly IHandlerOrder _handler;
+
+        public TimeToLiveHandler(IHandlerOrder handler)
+        {
+            _handler = handler;
+        }
+
+        public void HandleAnOrder(Order order)
+        {
+            if (order.LiveUntil > DateTime.Now)
+            {
+                _handler.HandleAnOrder(order);
+            }
+            else
+            {
+                 // drop
+                Console.WriteLine("dropping order nr: " + order.OrderId);
+            
+            }
+        }
+    }
+
+
     public class MoreFairDispatcher : IHandlerOrder
     {
         private readonly List<ThreadedHandler> _handlers;
@@ -118,8 +143,6 @@ namespace CQRS_restaurant
                 Thread.Sleep(1);
             }
         }
-
-
     }
 
 
@@ -192,6 +215,7 @@ namespace CQRS_restaurant
         void Start();
     }
 
+
     public class RoundRobin : IHandlerOrder
     {
         private readonly Queue<IHandlerOrder> _roundRobinHandlers;
@@ -263,6 +287,8 @@ namespace CQRS_restaurant
         {
 
             var order = new Order { OrderId = Guid.NewGuid().ToString() };
+            order.LiveUntil = DateTime.Now.AddSeconds(5);
+
             foreach (var item in items)
             {
                 order.AddItem(item);
@@ -350,7 +376,6 @@ namespace CQRS_restaurant
         public IList<string> GetOutstandingOrders()
         {
             return _orders.Where(x => x.Value.Paid == false).Select(x => x.Key).ToList();
-
 
         }
     }
