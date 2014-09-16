@@ -12,48 +12,51 @@ namespace CQRS_restaurant
 {
     public class WireUp
     {
-        List<ThreadedHandler> startables;
-        private List<ThreadedHandler> _queues;
+        List<ThreadedHandler<OrderPlaced>> cooks;
+        private List<IMonitor> monitorQueues;
 
         public void Start()
         {
             var pubsub = new Pubsub();
 
-            var orderHandler = new ConsolePrintingOrderHandler();
-            var cashier = new ThreadedHandler(new Cashier(pubsub), "cashier");
-            var assistant = new ThreadedHandler(new Assistantmanager(pubsub), "assistant");
+            var orderHandler = new ConsolePrintingHandler<OrderPaid>();
+            var cashier = new ThreadedHandler<OrderPriced>(new Cashier(pubsub), "cashier");
+            var assistant = new ThreadedHandler<OrderCooked>(new Assistantmanager(pubsub), "assistant");
 
             var rnd = new Random();
-            startables = new List<ThreadedHandler>()
+            cooks = new List<ThreadedHandler<OrderPlaced>>()
             {
-                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook1"),
-                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook2"),
-                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook3"),
-                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook4"),
-                new ThreadedHandler(new Cook(pubsub,  rnd.Next(0,1000) ), "cook5"),
+                new ThreadedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook1"),
+                new ThreadedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook2"),
+                new ThreadedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook3"),
+                new ThreadedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook4"),
+                new ThreadedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook5"),
 
             };
 
-            var kitchen = new ThreadedHandler(new TimeToLiveHandler(new MoreFairDispatcher(startables)), "disp");
+            var kitchen = new ThreadedHandler<OrderPlaced>(new TimeToLiveHandler<OrderPlaced>(new MoreFairDispatcher<OrderPlaced>(cooks)), "disp");
 
-            pubsub.Subscribe("ordered", kitchen);
-            pubsub.Subscribe("cooked", assistant);
-            pubsub.Subscribe("taxed", cashier);
-            pubsub.Subscribe("paid", orderHandler);
+            pubsub.Subscribe(kitchen);
+            pubsub.Subscribe(assistant);
+            pubsub.Subscribe(cashier);
+            pubsub.Subscribe(orderHandler);
 
             kitchen.Start();
             assistant.Start();
             cashier.Start();
 
-            _queues = startables.ToList();
-            _queues.Add(kitchen);
-            _queues.Add(cashier);
-            _queues.Add(assistant);
+            monitorQueues = new List<IMonitor>();
 
-            foreach (var startable in startables)
+            foreach (var threadCook in cooks)
             {
-                startable.Start();
+                monitorQueues.Add((IMonitor)threadCook);
+                threadCook.Start();
             }
+
+
+            monitorQueues.Add(kitchen);
+            monitorQueues.Add(cashier);
+            monitorQueues.Add(assistant);
 
             var waiter = new Waiter(pubsub);
 
@@ -79,7 +82,7 @@ namespace CQRS_restaurant
             while (true)
             {
                 Thread.Sleep(1000);
-                foreach (var startable in _queues)
+                foreach (var startable in monitorQueues)
                 {
                     Console.WriteLine(startable.Status());
                 }
@@ -97,77 +100,115 @@ namespace CQRS_restaurant
         }
     }
 
+    public interface IPublisher
+    {
+        void Publish<T>(string topic, T message) where T : IMessage;
+        void Publish<T>(T message) where T : IMessage;
+    }
+
     public class Pubsub : IPublisher
     {
-        private Dictionary<string, Multiplexer> mutiplexers = new Dictionary<string, Multiplexer>();
+        private Dictionary<string, Multiplexer<IMessage>> mutiplexers = new Dictionary<string, Multiplexer<IMessage>>();
 
-        public Pubsub()
+        public void Subscribe<T>(IHandler<T> handler) where T : IMessage
         {
-        }
-
-        public void Subscribe(string topic, IHandlerOrder handler)
-        {
-            Multiplexer multi;
-            if (mutiplexers.TryGetValue(topic, out multi))
+            Multiplexer<IMessage> multi;
+            if (mutiplexers.TryGetValue(typeof(T).FullName, out multi))
             {
-                multi.AddHandler(handler);
+                multi.AddHandler(new Widener<IMessage, T>(handler));
             }
             else
             {
-                mutiplexers.Add(topic, new Multiplexer(new List<IHandlerOrder> { handler }));
+                mutiplexers.Add(typeof(T).FullName,
+                    new Multiplexer<IMessage>(new List<IHandler<IMessage>> { new Widener<IMessage, T>(handler) }));
             }
         }
 
-        public void Publish(string topic, Order order)
+        public void Publish<T>(string topic, T message) where T : IMessage
         {
-            Multiplexer multi;
-            if (mutiplexers.TryGetValue(topic, out multi))
+            Multiplexer<IMessage> multi;
+            if (mutiplexers.TryGetValue(typeof(T).FullName, out multi))
             {
-                multi.HandleAnOrder(order);
+                multi.Handle(message);
             }
             else
             {
                 Console.WriteLine("no matching multiplexer." + topic);
             }
         }
+
+        public void Publish<T>(T message) where T : IMessage
+        {
+            Publish(typeof(T).FullName, message);
+        }
+
     }
 
-
-    public class TimeToLiveHandler : IHandlerOrder
+    public class Widener<TIn, TOut> : IHandler<TIn>
+        where TOut : TIn
+        where TIn : IMessage
     {
-        private readonly IHandlerOrder _handler;
+        private readonly IHandler<TOut> _handler;
 
-        public TimeToLiveHandler(IHandlerOrder handler)
+        public Widener(IHandler<TOut> handler)
         {
             _handler = handler;
         }
 
-        public void HandleAnOrder(Order order)
+        public void Handle(TIn message)
         {
-            if (order.LiveUntil > DateTime.Now)
+            TOut mess;
+            try
             {
-                _handler.HandleAnOrder(order);
+                mess = (TOut)message;
+            }
+            catch
+            {
+                return;
+            }
+            _handler.Handle(mess);
+        }
+    }
+
+
+    public class TimeToLiveHandler<T> : IHandler<T> where T : IMessage
+    {
+        private readonly IHandler<T> _handler;
+
+        public TimeToLiveHandler(IHandler<T> handler)
+        {
+            _handler = handler;
+        }
+
+        public void Handle(T message)
+        {
+
+            var foo = message as IWontWaitForEver;
+
+            if (foo != null && foo.LiveUntil > DateTime.Now)
+            {
+                _handler.Handle(message);
             }
             else
             {
                 // drop
-                Console.WriteLine("dropping order nr: " + order.OrderId);
+                Console.WriteLine("dropping order.");
 
             }
         }
     }
 
 
-    public class MoreFairDispatcher : IHandlerOrder
+    public class MoreFairDispatcher<T> : IHandler<T> where T : IMessage
     {
-        private readonly List<ThreadedHandler> _handlers;
+        private readonly List<ThreadedHandler<T>> _handlers;
 
-        public MoreFairDispatcher(IEnumerable<ThreadedHandler> handlers)
+        public MoreFairDispatcher(IEnumerable<ThreadedHandler<T>> handlers)
         {
-            _handlers = new List<ThreadedHandler>(handlers); ;
+            _handlers = new List<ThreadedHandler<T>>(handlers); ;
         }
 
-        public void HandleAnOrder(Order order)
+        public void Handle(T message)
         {
             while (true)
             {
@@ -177,7 +218,7 @@ namespace CQRS_restaurant
                     var queuecount = handle.GetQueueCount();
                     if (queuecount < 5)
                     {
-                        handle.HandleAnOrder(order);
+                        handle.Handle(message);
                         return;
                     }
                 }
@@ -188,21 +229,21 @@ namespace CQRS_restaurant
     }
 
 
-    public class ThreadedHandler : IHandlerOrder, IStartable, IMonitor
+    public class ThreadedHandler<T> : IStartable, IMonitor, IHandler<T> where T : IMessage
     {
-        private readonly IHandlerOrder _handler;
+        private readonly IHandler<T> _handler;
         private readonly string _name;
-        private readonly ConcurrentQueue<Order> _queue = new ConcurrentQueue<Order>();
+        private readonly ConcurrentQueue<T> _queue = new ConcurrentQueue<T>();
 
-        public ThreadedHandler(IHandlerOrder handler, string name)
+        public ThreadedHandler(IHandler<T> handler, string name)
         {
             _handler = handler;
             _name = name;
         }
 
-        public void HandleAnOrder(Order order)
+        public void Handle(T message)
         {
-            _queue.Enqueue(order);
+            _queue.Enqueue(message);
         }
 
         public void Start()
@@ -215,8 +256,8 @@ namespace CQRS_restaurant
         {
             while (true)
             {
-                Order order;
-                if (!_queue.TryDequeue(out order))
+                T message;
+                if (!_queue.TryDequeue(out message))
                 {
                     Thread.Sleep(17);
 
@@ -225,12 +266,12 @@ namespace CQRS_restaurant
                 {
                     try
                     {
-                        _handler.HandleAnOrder(order);
+                        _handler.Handle(message);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        Console.WriteLine("Handler failed placing the order back to the queue");
-                        _queue.Enqueue(order);
+                        Console.WriteLine("Handler failed placing the order back to the queue" + e.Message);
+                        _queue.Enqueue(message);
                     }
                 }
             }
@@ -257,21 +298,16 @@ namespace CQRS_restaurant
         void Start();
     }
 
-    public interface IPublisher
+    public class RoundRobin<T> : IHandler<T> where T : IMessage
     {
-        void Publish(string topic, Order order);
-    }
+        private readonly Queue<IHandler<T>> _roundRobinHandlers;
 
-    public class RoundRobin : IHandlerOrder
-    {
-        private readonly Queue<IHandlerOrder> _roundRobinHandlers;
-
-        public void HandleAnOrder(Order order)
+        public void Handle(T order)
         {
             var handle = _roundRobinHandlers.Dequeue();
             try
             {
-                handle.HandleAnOrder(order);
+                handle.Handle(order);
             }
             catch (Exception)
             {
@@ -283,46 +319,46 @@ namespace CQRS_restaurant
             }
         }
 
-        public RoundRobin(IEnumerable<IHandlerOrder> handlers)
+        public RoundRobin(IEnumerable<IHandler<T>> handlers)
         {
-            _roundRobinHandlers = new Queue<IHandlerOrder>(handlers);
+            _roundRobinHandlers = new Queue<IHandler<T>>(handlers);
         }
     }
 
-    public class Multiplexer : IHandlerOrder
+    public class Multiplexer<T> : IHandler<T> where T : IMessage
     {
-        private readonly List<IHandlerOrder> _handlers;
+        private readonly List<IHandler<T>> _handlers;
 
-        public Multiplexer(IEnumerable<IHandlerOrder> handlers)
+        public Multiplexer(IEnumerable<IHandler<T>> handlers)
         {
             _handlers = handlers.ToList();
         }
 
-        public void HandleAnOrder(Order order)
+        public void Handle(T order)
         {
             foreach (var handler in _handlers)
             {
-                handler.HandleAnOrder(order);
+                handler.Handle(order);
             }
         }
 
-        public void AddHandler(IHandlerOrder handler)
+        public void AddHandler(IHandler<T> handler)
         {
             _handlers.Add(handler);
         }
     }
 
-    public interface IHandlerOrder
+    public interface IHandler<T> where T : IMessage
     {
-        void HandleAnOrder(Order order);
+        void Handle(T message);
     }
 
-    public class ConsolePrintingOrderHandler : IHandlerOrder
+    public class ConsolePrintingHandler<T> : IHandler<T> where T : IMessage
     {
-        public void HandleAnOrder(Order order)
+        public void Handle(T message)
         {
-            Console.WriteLine("order completed" + order.OrderId);
-           // Console.WriteLine(JsonConvert.SerializeObject(order));
+            Console.WriteLine("order completed" + message.ToString());
+            // Console.WriteLine(JsonConvert.SerializeObject(order));
         }
     }
 
@@ -338,20 +374,24 @@ namespace CQRS_restaurant
         public string PlaceOrder(IEnumerable<Item> items)
         {
             var order = new Order { OrderId = Guid.NewGuid().ToString() };
-            order.LiveUntil = DateTime.Now.AddSeconds(10);
+          
 
             foreach (var item in items)
             {
                 order.AddItem(item);
             }
 
-            _publisher.Publish("ordered", order);
+            _publisher.Publish(new OrderPlaced()
+            {
+                Order = order,
+                LiveUntil = DateTime.Now.AddSeconds(10)
+            });
 
             return order.OrderId;
         }
     }
 
-    public class Cook : IHandlerOrder
+    public class Cook : IHandler<OrderPlaced>
     {
         private readonly IPublisher _publisher;
 
@@ -370,23 +410,23 @@ namespace CQRS_restaurant
             _cookTime = cookTime;
         }
 
-        public void HandleAnOrder(Order order)
+        public void Handle(OrderPlaced message)
         {
-            foreach (var item in order.Items.ToList())
+            foreach (var item in (message).Order.Items.ToList())
                 foreach (var ingredient in ingredients[item.Name].ToList())
                 {
-                    order.AddIngredient(ingredient);
+                    message.Order.AddIngredient(ingredient);
                 }
 
             //    Console.WriteLine(JsonConvert.SerializeObject(order.Ingredients) + "added.");
 
             Thread.Sleep(_cookTime);
 
-            _publisher.Publish("cooked", order);
+            _publisher.Publish( new OrderCooked() { Order = message.Order});
         }
     }
 
-    public class Assistantmanager : IHandlerOrder
+    public class Assistantmanager : IHandler<OrderCooked>
     {
         private readonly IPublisher _publisher;
 
@@ -396,17 +436,19 @@ namespace CQRS_restaurant
 
         }
 
-        public void HandleAnOrder(Order order)
+        public void Handle(OrderCooked message)
         {
+            var order = message.Order;
+
             order.SubTotal = order.Items.Sum(x => x.Price * x.Qty);
             order.Tax = order.SubTotal * 0.2m;
             order.Total = order.SubTotal + order.Tax;
 
-            _publisher.Publish("taxed", order);
+            _publisher.Publish(new OrderPriced() { Order = message.Order });
         }
     }
 
-    public class Cashier : IHandlerOrder
+    public class Cashier : IHandler<OrderPriced>
     {
         private readonly IPublisher _publisher;
 
@@ -417,10 +459,14 @@ namespace CQRS_restaurant
             _publisher = publisher;
         }
 
-        public void HandleAnOrder(Order order)
+        public void Handle(OrderPriced message)
         {
+            var order = message.Order;
             _orders.Add(order.OrderId, order);
-            _publisher.Publish("paid", order);
+            _publisher.Publish(new OrderPaid()
+            {
+                Order = order
+            });
         }
 
         public void Pay(string orderId)

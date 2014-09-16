@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 
 namespace CQRS_restaurant
 {
-    public class Order : IWontWaitForEver
+    public class Order 
     {
         private readonly JObject _doc;
 
