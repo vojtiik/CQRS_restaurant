@@ -9,42 +9,29 @@ namespace CQRS_restaurant
             EventId = Guid.NewGuid().ToString();
         }
 
+        public string CorrelationId { get; set; }
+        public string CausationId { get; set; }
+
         public string EventId { get; private set; }
 
-        public DateTime LiveUntil
-        { get; set; }
+        public DateTime LiveUntil { get; set; }
     }
 
-    public class OrderPlaced : BaseEvent
-    {
-        public Order Order { get; set; }
-    }
-
-    public class OrderPriced : BaseEvent
-    {
-        public Order Order { get; set; }
-    }
-
-    public class OrderCooked : BaseEvent
-    {
-        public Order Order { get; set; }
-    }
-
-    public class OrderPaid : BaseEvent
-    {
-        public Order Order { get; set; }
-    }
-
+   
     public interface IMessage
     {
 
+        string CorrelationId { get; set; }
+        string CausationId { get; set; }
+
+        string EventId { get; }
     }
 
     public class CookFood : BaseEvent
     {
         public Order Order { get; set; }
     }
-   
+
     public class PlaceOrder : BaseEvent
     {
         public Order Order { get; set; }
@@ -54,8 +41,14 @@ namespace CQRS_restaurant
     {
         public Order Order { get; set; }
     }
-    
+
     public class PriceOrder : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+
+
+    public class PrintOrder : BaseEvent
     {
         public Order Order { get; set; }
     }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -36,7 +37,12 @@ namespace CQRS_restaurant.Actors
 
             Thread.Sleep(_cookTime);
 
-            _publisher.Publish( new PriceOrder() { Order = message.Order});
+            _publisher.Publish(new PriceOrder()
+            {
+                Order = message.Order,
+                CorrelationId = message.CorrelationId,
+                CausationId = message.EventId
+            });
         }
     }
 }

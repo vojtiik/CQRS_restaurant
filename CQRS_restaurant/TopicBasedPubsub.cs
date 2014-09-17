@@ -22,22 +22,34 @@ namespace CQRS_restaurant
             }
         }
 
-        public void Publish<T>(string topic, T message) where T : IMessage
+        public void Subscribe<T>(IHandler<T> handler, string correlationId) where T : IMessage
         {
             MultiplexerHandler<IMessage> multi;
-            if (mutiplexers.TryGetValue(typeof(T).FullName, out multi))
+            if (mutiplexers.TryGetValue(correlationId, out multi))
             {
-                multi.Handle(message);
+                multi.AddHandler(new Widener<IMessage, T>(handler));
             }
             else
             {
-                Console.WriteLine("no matching multiplexer." + topic);
+                mutiplexers.Add(correlationId,
+                    new MultiplexerHandler<IMessage>(new List<IHandler<IMessage>> { new Widener<IMessage, T>(handler) }));
+            }
+        }
+
+        public void Publish<T>(string topic, T message) where T : IMessage
+        {
+            MultiplexerHandler<IMessage> multi;
+            if (mutiplexers.TryGetValue(topic, out multi))
+            {
+                multi.Handle(message);
             }
         }
 
         public void Publish<T>(T message) where T : IMessage
         {
             Publish(typeof(T).FullName, message);
+            Publish(message.CorrelationId, message);
+
         }
 
     }

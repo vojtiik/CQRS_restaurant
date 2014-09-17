@@ -19,7 +19,6 @@ namespace CQRS_restaurant
         {
             var pubsub = new TopicBasedPubsub();
 
-            var orderHandler = new ConsolePrintingHandler();
             var cashier = new QueuedHandler<TakePayment>(new Cashier(pubsub), "cashier");
             var assistant = new QueuedHandler<PriceOrder>(new Assistantmanager(pubsub), "assistant");
 
@@ -38,12 +37,13 @@ namespace CQRS_restaurant
                 new TimeToLiveHandler<CookFood>(
                     new MoreFairDispatcherHandler<CookFood>(cooks)
                     ), "kitchen");
+            
+            var printer = new ConsolePrintingHandler();
 
             pubsub.Subscribe(kitchen);
             pubsub.Subscribe(assistant);
             pubsub.Subscribe(cashier);
-            pubsub.Subscribe(orderHandler);
-
+  
             kitchen.Start();
             assistant.Start();
             cashier.Start();
@@ -72,9 +72,14 @@ namespace CQRS_restaurant
                 new Item {Name = "Goulash", Qty = 2, Price = 3.50m}
             };
 
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 100; i++)
             {
-                waiter.PlaceOrder(items);
+                var corr = Guid.NewGuid().ToString();
+                pubsub.Subscribe<CookFood>(printer, corr);
+                pubsub.Subscribe<PlaceOrder>(printer, corr);
+                pubsub.Subscribe<TakePayment>(printer, corr);
+                waiter.PlaceOrder(items, corr);
+
             }
 
             Console.ReadLine();

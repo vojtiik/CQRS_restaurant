@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 
 namespace CQRS_restaurant.Actors
@@ -6,13 +7,15 @@ namespace CQRS_restaurant.Actors
     public class Waiter
     {
         private readonly IPublisher _publisher;
+  
 
         public Waiter(IPublisher publisher)
         {
             _publisher = publisher;
+           
         }
 
-        public string PlaceOrder(IEnumerable<Item> items)
+        public string PlaceOrder(IEnumerable<Item> items,string corr)
         {
             var order = new Order { OrderId = Guid.NewGuid().ToString() };
           
@@ -25,9 +28,13 @@ namespace CQRS_restaurant.Actors
             _publisher.Publish(new CookFood()
             {
                 Order = order,
-                LiveUntil = DateTime.Now.AddSeconds(10)
+                LiveUntil = DateTime.Now.AddSeconds(10),
+                CorrelationId = corr,
+                CausationId = string.Empty
                 
             });
+
+            
 
             return order.OrderId;
         }

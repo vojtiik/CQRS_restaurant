@@ -20,9 +20,11 @@ namespace CQRS_restaurant.Actors
         {
             var order = message.Order;
             _orders.Add(order.OrderId, order);
-            _publisher.Publish(new OrderPaid()
+            _publisher.Publish(new PrintOrder()
             {
-                Order = order
+                Order = order,
+                CorrelationId = message.CorrelationId,
+                CausationId = message.EventId
             });
         }
 
