@@ -40,9 +40,9 @@ namespace CQRS_restaurant
             };
 
             var kitchen = new QueuedHandler<CookFood>(
-                new TimeToLiveHandler<CookFood>(
+                new RandomlyDropOrder<CookFood>(new TimeToLiveHandler<CookFood>(
                     new MoreFairDispatcherHandler<CookFood>(cooks)
-                    ), "kitchen");
+                    ), 10), "kitchen");
 
             var printer = new ConsolePrintingHandler();
 
@@ -78,7 +78,7 @@ namespace CQRS_restaurant
                 new Item {Name = "Goulash", Qty = 2, Price = 3.50m}
             };
 
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 var corr = Guid.NewGuid().ToString();
                 //pubsub.Subscribe<CookFood>(printer, corr);

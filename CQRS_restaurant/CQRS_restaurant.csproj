@@ -54,8 +54,10 @@
     <Compile Include="Handlers\IHandler.cs" />
     <Compile Include="Handlers\MoreFairDispatcherHandler.cs" />
     <Compile Include="Handlers\MultiplexerHandler.cs" />
+    <Compile Include="Handlers\RandomlyDropOrder.cs" />
     <Compile Include="Handlers\RoundRobinHandler.cs" />
     <Compile Include="Handlers\QueuedHandler.cs" />
+    <Compile Include="Handlers\SpikeOrder.cs" />
     <Compile Include="Handlers\TimeToLiveHandler.cs" />
     <Compile Include="IMonitor.cs" />
     <Compile Include="IStartable.cs" />
