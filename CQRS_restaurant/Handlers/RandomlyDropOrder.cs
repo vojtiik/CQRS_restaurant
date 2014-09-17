@@ -17,16 +17,14 @@ namespace CQRS_restaurant.Handlers
 
         public void Handle(T message)
         {
-        
-                if (rnd.Next(0, _dropRatio * 2) < _dropRatio)
-                {
-                    Console.WriteLine("Order dropped randomly");
-                    return;
-                }
+            if (rnd.Next(0, _dropRatio * 2) < _dropRatio)
+            {
+                Console.WriteLine("Order dropped randomly");
+                return;
+            }
 
-                _handler.Handle(message);
+            _handler.Handle(message);
 
-         
         }
     }
 }

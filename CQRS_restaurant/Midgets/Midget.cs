@@ -44,7 +44,9 @@ namespace CQRS_restaurant.Midgets
         public void Handle(FoodCooked message)
         {
             if (message == null) return;
+            
             _cooked = true;
+           
             _publisher.Publish(new PriceOrder()
             {
                 CorrelationId = message.CorrelationId,
@@ -81,10 +83,7 @@ namespace CQRS_restaurant.Midgets
 
         public void Handle(CookFoodTimedout message)
         {
-
             if (message == null) return;
-
-
 
             if (!_cooked)
             {
@@ -93,7 +92,6 @@ namespace CQRS_restaurant.Midgets
                     _publisher.UnSubscribe(message.CorrelationId);
                     return;
                 }
-
 
                 _publisher.Publish(new CookFood()
                 {

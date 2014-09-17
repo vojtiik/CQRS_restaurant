@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using CQRS_restaurant.Handlers;
+using FluentAssertions;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using System.Linq;
@@ -15,6 +16,14 @@ namespace CQRS_restaurant.Tests
         }
 
         [TestCase]
+        public void CanWriteToEventStore()
+        {
+            
+            var queue = new QueuedHandler<IMessage>(null, "NAME");
+            queue.Enqueue(new PlaceOrder());
+        }
+
+        [TestCase]
         public void ReadProperty()
         {
             var doc = JObject.Parse(@"{ orderId : '1', items : [{ name : 'pratryuwn', qty : 5, price: 123 }, { name : 'prawn', qty : 3, price: 1233 }] }");
@@ -27,6 +36,8 @@ namespace CQRS_restaurant.Tests
             items[0].Qty.Should().Be(5);
             items[0].Price.Should().Be(123);
         }
+
+
 
         [TestCase]
         public void WriteProperty()

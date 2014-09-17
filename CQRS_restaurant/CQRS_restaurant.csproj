@@ -32,6 +32,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EventStore.ClientAPI">
+      <HintPath>..\packages\EventStore.Client.3.0.0-rc9\lib\net40\EventStore.ClientAPI.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.6.0.5\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -50,6 +53,7 @@
     <Compile Include="Actors\Cook.cs" />
     <Compile Include="Actors\Waiter.cs" />
     <Compile Include="BaseEvent.cs" />
+    <Compile Include="EventStoreConnection.cs" />
     <Compile Include="Handlers\ConsolePrintingHandler.cs" />
     <Compile Include="Handlers\IHandler.cs" />
     <Compile Include="Handlers\MoreFairDispatcherHandler.cs" />

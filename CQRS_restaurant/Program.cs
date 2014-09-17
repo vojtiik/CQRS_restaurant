@@ -22,7 +22,6 @@ namespace CQRS_restaurant
          
             var clock = new AlarmClock(pubsub);
             
-            
             var midgetHouse = new QueuedHandler<IMessage>(new MidgetHouse(pubsub), "midgets");
             midgetHouse.Start();
             pubsub.Subscribe<IMessage>(midgetHouse);
