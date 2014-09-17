@@ -3,7 +3,7 @@ using CQRS_restaurant.Handlers;
 
 namespace CQRS_restaurant.Actors
 {
-    public class Assistantmanager : IHandler<OrderCooked>
+    public class Assistantmanager : IHandler<PriceOrder>
     {
         private readonly IPublisher _publisher;
 
@@ -13,7 +13,7 @@ namespace CQRS_restaurant.Actors
 
         }
 
-        public void Handle(OrderCooked message)
+        public void Handle(PriceOrder message)
         {
             var order = message.Order;
 
@@ -21,7 +21,7 @@ namespace CQRS_restaurant.Actors
             order.Tax = order.SubTotal * 0.2m;
             order.Total = order.SubTotal + order.Tax;
 
-            _publisher.Publish(new OrderPriced() { Order = message.Order });
+            _publisher.Publish(new TakePayment() { Order = message.Order });
         }
     }
 }

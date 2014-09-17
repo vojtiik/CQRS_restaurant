@@ -5,7 +5,7 @@ using CQRS_restaurant.Handlers;
 
 namespace CQRS_restaurant.Actors
 {
-    public class Cook : IHandler<OrderPlaced>
+    public class Cook : IHandler<CookFood>
     {
         private readonly IPublisher _publisher;
 
@@ -24,7 +24,7 @@ namespace CQRS_restaurant.Actors
             _cookTime = cookTime;
         }
 
-        public void Handle(OrderPlaced message)
+        public void Handle(CookFood message)
         {
             foreach (var item in (message).Order.Items.ToList())
                 foreach (var ingredient in ingredients[item.Name].ToList())
@@ -36,7 +36,7 @@ namespace CQRS_restaurant.Actors
 
             Thread.Sleep(_cookTime);
 
-            _publisher.Publish( new OrderCooked() { Order = message.Order});
+            _publisher.Publish( new PriceOrder() { Order = message.Order});
         }
     }
 }

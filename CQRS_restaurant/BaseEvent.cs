@@ -39,4 +39,26 @@ namespace CQRS_restaurant
     {
 
     }
+
+    public class CookFood : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+   
+    public class PlaceOrder : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+
+    public class TakePayment : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+    
+    public class PriceOrder : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+
 }
+

@@ -12,7 +12,7 @@ namespace CQRS_restaurant
 {
     public class WireUp
     {
-        List<QueuedHandler<OrderPlaced>> cooks;
+        List<QueuedHandler<CookFood>> cooks;
         private List<IMonitor> monitorQueues;
 
         public void Start()
@@ -20,23 +20,23 @@ namespace CQRS_restaurant
             var pubsub = new TopicBasedPubsub();
 
             var orderHandler = new ConsolePrintingHandler();
-            var cashier = new QueuedHandler<OrderPriced>(new Cashier(pubsub), "cashier");
-            var assistant = new QueuedHandler<OrderCooked>(new Assistantmanager(pubsub), "assistant");
+            var cashier = new QueuedHandler<TakePayment>(new Cashier(pubsub), "cashier");
+            var assistant = new QueuedHandler<PriceOrder>(new Assistantmanager(pubsub), "assistant");
 
             var rnd = new Random();
-            cooks = new List<QueuedHandler<OrderPlaced>>()
+            cooks = new List<QueuedHandler<CookFood>>()
             {
-                new QueuedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook1"),
-                new QueuedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook2"),
-                new QueuedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook3"),
-                new QueuedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook4"),
-                new QueuedHandler<OrderPlaced>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook5"),
+                new QueuedHandler<CookFood>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook1"),
+                new QueuedHandler<CookFood>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook2"),
+                new QueuedHandler<CookFood>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook3"),
+                new QueuedHandler<CookFood>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook4"),
+                new QueuedHandler<CookFood>(new Cook(pubsub,  rnd.Next(0,1000) ), "cook5"),
 
             };
 
-            var kitchen = new QueuedHandler<OrderPlaced>(
-                new TimeToLiveHandler<OrderPlaced>(
-                    new MoreFairDispatcherHandler<OrderPlaced>(cooks)
+            var kitchen = new QueuedHandler<CookFood>(
+                new TimeToLiveHandler<CookFood>(
+                    new MoreFairDispatcherHandler<CookFood>(cooks)
                     ), "kitchen");
 
             pubsub.Subscribe(kitchen);

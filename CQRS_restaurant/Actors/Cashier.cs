@@ -5,7 +5,7 @@ using CQRS_restaurant.Handlers;
 
 namespace CQRS_restaurant.Actors
 {
-    public class Cashier : IHandler<OrderPriced>
+    public class Cashier : IHandler<TakePayment>
     {
         private readonly IPublisher _publisher;
 
@@ -16,7 +16,7 @@ namespace CQRS_restaurant.Actors
             _publisher = publisher;
         }
 
-        public void Handle(OrderPriced message)
+        public void Handle(TakePayment message)
         {
             var order = message.Order;
             _orders.Add(order.OrderId, order);
