@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using CQRS_restaurant.Actors;
 using CQRS_restaurant.Handlers;
+using CQRS_restaurant.Midgets;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
@@ -18,7 +19,10 @@ namespace CQRS_restaurant
         public void Start()
         {
             var pubsub = new TopicBasedPubsub();
-
+         
+            var clock = new AlarmClock(pubsub);
+            
+            
             var midgetHouse = new QueuedHandler<IMessage>(new MidgetHouse(pubsub), "midgets");
             midgetHouse.Start();
             pubsub.Subscribe<IMessage>(midgetHouse);
@@ -42,7 +46,7 @@ namespace CQRS_restaurant
             var kitchen = new QueuedHandler<CookFood>(
                 new RandomlyDropOrder<CookFood>(new TimeToLiveHandler<CookFood>(
                     new MoreFairDispatcherHandler<CookFood>(cooks)
-                    ), 10), "kitchen");
+                    ), 3), "kitchen");
 
             var printer = new ConsolePrintingHandler();
 
@@ -50,10 +54,12 @@ namespace CQRS_restaurant
             pubsub.Subscribe(assistant);
             pubsub.Subscribe(cashier);
             pubsub.Subscribe(spike);
+            pubsub.Subscribe(clock);
 
             kitchen.Start();
             assistant.Start();
             cashier.Start();
+            clock.Start();
 
             monitorQueues = new List<IMonitor>();
 
@@ -78,7 +84,7 @@ namespace CQRS_restaurant
                 new Item {Name = "Goulash", Qty = 2, Price = 3.50m}
             };
 
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 10; i++)
             {
                 var corr = Guid.NewGuid().ToString();
                 //pubsub.Subscribe<CookFood>(printer, corr);

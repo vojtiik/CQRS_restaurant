@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 
 namespace CQRS_restaurant
 {
-    public class Order 
+    public class Order
     {
         private readonly JObject _doc;
 
@@ -47,7 +47,10 @@ namespace CQRS_restaurant
             {
                 existing.Value = value;
             }
-            _doc.Add(name, value);
+            else
+            {
+                _doc.Add(name, value);
+            }
         }
 
         private void Set(string name, bool value)
@@ -57,7 +60,10 @@ namespace CQRS_restaurant
             {
                 existing.Value = value;
             }
-            _doc.Add(name, value);
+            else
+            {
+                _doc.Add(name, value);
+            }
         }
 
         private void Set(string name, decimal value)
@@ -66,8 +72,12 @@ namespace CQRS_restaurant
             if (existing != null)
             {
                 existing.Value = value;
+
             }
-            _doc.Add(name, value);
+            else
+            {
+                _doc.Add(name, value);
+            }
         }
 
         public string OrderId
@@ -168,6 +178,6 @@ namespace CQRS_restaurant
 
     public interface IWontWaitForEver
     {
-         DateTime LiveUntil { get; set; }
+        DateTime LiveUntil { get; set; }
     }
 }

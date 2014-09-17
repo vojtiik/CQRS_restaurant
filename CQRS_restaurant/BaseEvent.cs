@@ -77,5 +77,24 @@ namespace CQRS_restaurant
         public Order Order { get; set; }
     }
 
+    public class CookFoodTimedout : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+
+    public class SendToMeInX : BaseEvent
+    {
+        public SendToMeInX(int seconds)
+        {
+            Seconds = seconds;
+        }
+
+        public IMessage Message { get; set; }
+
+        public int Seconds { get; set; }
+
+        public Order Order { get; set; }
+    }
+
 }
 

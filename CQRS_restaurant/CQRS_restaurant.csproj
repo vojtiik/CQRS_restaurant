@@ -44,12 +44,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Actors\AlarmClock.cs" />
     <Compile Include="Actors\Assistantmanager.cs" />
     <Compile Include="Actors\Cashier.cs" />
     <Compile Include="Actors\Cook.cs" />
     <Compile Include="Actors\Waiter.cs" />
     <Compile Include="BaseEvent.cs" />
-    <Compile Include="Handlers\MidgetFactory.cs" />
     <Compile Include="Handlers\ConsolePrintingHandler.cs" />
     <Compile Include="Handlers\IHandler.cs" />
     <Compile Include="Handlers\MoreFairDispatcherHandler.cs" />
@@ -61,6 +61,11 @@
     <Compile Include="Handlers\TimeToLiveHandler.cs" />
     <Compile Include="IMonitor.cs" />
     <Compile Include="IStartable.cs" />
+    <Compile Include="Midgets\IMidget.cs" />
+    <Compile Include="Midgets\Midget.cs" />
+    <Compile Include="Midgets\MidgetFactory.cs" />
+    <Compile Include="Midgets\MidgetFromZimbabwe.cs" />
+    <Compile Include="Midgets\MidgetHouse.cs" />
     <Compile Include="Order.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -31,7 +31,7 @@ namespace CQRS_restaurant.Actors
 
         public void Pay(string orderId)
         {
-            _orders[orderId].Paid = true;
+             _orders[orderId].Paid = true;
             Console.WriteLine("Paid for " + orderId);
         }
 
