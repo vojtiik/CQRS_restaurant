@@ -16,7 +16,7 @@ namespace CQRS_restaurant.Handlers
 
             var foo = message as IWontWaitForEver;
 
-            if (foo != null && foo.LiveUntil > DateTime.Now)
+            if (foo != null && (foo.LiveUntil == DateTime.MinValue || foo.LiveUntil > DateTime.Now))
             {
                 _handler.Handle(message);
             }

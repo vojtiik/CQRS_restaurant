@@ -50,6 +50,8 @@ namespace CQRS_restaurant
             Publish(typeof(T).FullName, message);
             Publish(message.CorrelationId, message);
 
+            Publish(typeof(IMessage).FullName, message);
+           // var interfaces = typeof(T).GetInterface("IMessage");
         }
 
     }

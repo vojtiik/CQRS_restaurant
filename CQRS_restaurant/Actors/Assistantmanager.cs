@@ -21,7 +21,7 @@ namespace CQRS_restaurant.Actors
             order.Tax = order.SubTotal * 0.2m;
             order.Total = order.SubTotal + order.Tax;
 
-            _publisher.Publish(new TakePayment()
+            _publisher.Publish(new OrderPriced()
             {
                 Order = message.Order,
                 CorrelationId = message.CorrelationId,

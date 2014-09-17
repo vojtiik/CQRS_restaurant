@@ -19,6 +19,10 @@ namespace CQRS_restaurant
         {
             var pubsub = new TopicBasedPubsub();
 
+            var midgetHouse =  new QueuedHandler<IMessage>(new MidgetHouse(pubsub),"midgets");
+ midgetHouse.Start();
+            pubsub.Subscribe<IMessage>(midgetHouse);
+
             var cashier = new QueuedHandler<TakePayment>(new Cashier(pubsub), "cashier");
             var assistant = new QueuedHandler<PriceOrder>(new Assistantmanager(pubsub), "assistant");
 
@@ -72,7 +76,7 @@ namespace CQRS_restaurant
                 new Item {Name = "Goulash", Qty = 2, Price = 3.50m}
             };
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 var corr = Guid.NewGuid().ToString();
                 pubsub.Subscribe<CookFood>(printer, corr);
@@ -147,4 +151,9 @@ namespace CQRS_restaurant
         public int Qty { get; set; }
         public decimal Price { get; set; }
     }
+
+  
+
 }
+
+

@@ -37,7 +37,7 @@ namespace CQRS_restaurant.Actors
 
             Thread.Sleep(_cookTime);
 
-            _publisher.Publish(new PriceOrder()
+            _publisher.Publish(new FoodCooked()
             {
                 Order = message.Order,
                 CorrelationId = message.CorrelationId,

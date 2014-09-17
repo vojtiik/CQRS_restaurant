@@ -24,8 +24,9 @@ namespace CQRS_restaurant.Actors
             {
                 order.AddItem(item);
             }
+            Console.Write(".");
 
-            _publisher.Publish(new CookFood()
+            _publisher.Publish(new OrderPlaced()
             {
                 Order = order,
                 LiveUntil = DateTime.Now.AddSeconds(10),

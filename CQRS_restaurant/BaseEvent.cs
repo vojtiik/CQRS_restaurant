@@ -17,13 +17,32 @@ namespace CQRS_restaurant
         public DateTime LiveUntil { get; set; }
     }
 
-   
+    public class OrderPlaced : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+
+    public class OrderPriced : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+
+    public class FoodCooked : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+
+    public class OrderPaid : BaseEvent
+    {
+        public Order Order { get; set; }
+
+    }
+
     public interface IMessage
     {
 
         string CorrelationId { get; set; }
         string CausationId { get; set; }
-
         string EventId { get; }
     }
 
