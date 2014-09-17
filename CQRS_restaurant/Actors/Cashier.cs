@@ -20,6 +20,7 @@ namespace CQRS_restaurant.Actors
         {
             var order = message.Order;
             _orders.Add(order.OrderId, order);
+            Pay(order.OrderId);
             _publisher.Publish(new OrderPaid()
             {
                 Order = order,

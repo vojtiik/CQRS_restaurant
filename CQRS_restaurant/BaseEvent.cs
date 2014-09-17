@@ -67,7 +67,12 @@ namespace CQRS_restaurant
     }
 
 
-    public class PrintOrder : BaseEvent
+    public class SpikeOrder : BaseEvent
+    {
+        public Order Order { get; set; }
+    }
+
+    public class SpikeIt : BaseEvent
     {
         public Order Order { get; set; }
     }

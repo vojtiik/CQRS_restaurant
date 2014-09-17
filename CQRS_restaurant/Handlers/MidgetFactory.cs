@@ -51,7 +51,7 @@ namespace CQRS_restaurant.Handlers
 
         public IMidget GetMidget()
         {
-            return new Midget(_publisher);
+            return new MidgetFromZimbabwe(_publisher);
         }
 
     }
@@ -109,7 +109,71 @@ namespace CQRS_restaurant.Handlers
         public void Handle(OrderPaid message)
         {
             if (message == null) return;
-            _publisher.Publish(new PrintOrder()
+            _publisher.Publish(new CQRS_restaurant.SpikeOrder()
+            {
+                CorrelationId = message.CorrelationId,
+                CausationId = message.EventId,
+                Order = message.Order
+            });
+
+            _publisher.UnSubscribe(message.CorrelationId);
+        }
+
+
+    }
+
+
+    public class MidgetFromZimbabwe : IMidget
+    {
+        private readonly IPublisher _publisher;
+
+        public MidgetFromZimbabwe(IPublisher publisher)
+        {
+            _publisher = publisher;
+        }
+
+
+        public void Handle(OrderPlaced message)
+        {
+            if (message == null) return;
+
+            _publisher.Publish(new PriceOrder()
+            {
+                CorrelationId = message.CorrelationId,
+                CausationId = message.EventId,
+                Order = message.Order
+            });
+        }
+
+
+        public void Handle(FoodCooked message)
+        {
+            if (message == null) return;
+            _publisher.Publish(new CQRS_restaurant.SpikeOrder()
+            {
+                CorrelationId = message.CorrelationId,
+                CausationId = message.EventId,
+                Order = message.Order
+            });
+
+            _publisher.UnSubscribe(message.CorrelationId);
+        }
+
+        public void Handle(OrderPriced message)
+        {
+            if (message == null) return;
+            _publisher.Publish(new TakePayment()
+            {
+                CorrelationId = message.CorrelationId,
+                CausationId = message.EventId,
+                Order = message.Order
+            });
+        }
+
+        public void Handle(OrderPaid message)
+        {
+            if (message == null) return;
+            _publisher.Publish(new CookFood()
             {
                 CorrelationId = message.CorrelationId,
                 CausationId = message.EventId,
@@ -119,5 +183,6 @@ namespace CQRS_restaurant.Handlers
 
 
     }
+
 
 }

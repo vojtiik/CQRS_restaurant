@@ -54,5 +54,11 @@ namespace CQRS_restaurant
            // var interfaces = typeof(T).GetInterface("IMessage");
         }
 
+        public void UnSubscribe(string topic)
+        {
+            mutiplexers.Remove(topic);
+            Console.WriteLine("midget died");
+        }
+
     }
 }
